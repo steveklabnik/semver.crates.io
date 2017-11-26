@@ -3,8 +3,8 @@ authors = ["steveklabnik <steve@steveklabnik.com>"]
 name = "semverweb"
 version = "0.1.0"
 
+[dependencies]
+semver = "0.9.0"
+
 [lib]
 crate-type = ["cdylib"]
-
-[dependencies]
-
