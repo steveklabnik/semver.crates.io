@@ -3,30 +3,33 @@ extern crate semver;
 use semver::Version;
 use semver::VersionReq;
 
-fn is_match(v: &Version, r: &VersionReq) -> bool {
-    r.matches(v)
+#[no_mangle]
+pub fn is_match(v: &str, r: &str) -> bool {
+    let v = match Version::parse(v) {
+        Ok(v) => v,
+        Err(_) => return false,
+    };
+
+    let r = match VersionReq::parse(r) {
+        Ok(r) => r,
+        Err(_) => return false,
+    };
+
+    r.matches(&v)
 }
 
 #[cfg(test)]
 mod tests {
-    use semver::Version;
-    use semver::VersionReq;
     use super::is_match;
 
     #[test]
     fn matches() {
-        let r = VersionReq::parse(">= 1.0.0").unwrap();
-        let v = Version::parse("1.0.0").unwrap();
-
-        assert!(is_match(&v, &r));
+        assert!(is_match("1.0.0", ">= 1.0.0"));
     }
 
     #[test]
     fn does_not_match() {
-        let r = VersionReq::parse(">= 1.0.0").unwrap();
-        let v = Version::parse("0.1.0").unwrap();
-
-        assert!(!is_match(&v, &r));
+        assert!(!is_match("0.1.0", ">= 1.0.0"));
     }
 }
 
