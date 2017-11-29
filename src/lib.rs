@@ -7,30 +7,25 @@ use std::mem;
 use std::ffi::CStr;
 use std::os::raw::{c_char, c_void};
 
+macro_rules! check {
+    ($expr:expr) => (match $expr {
+        Ok(val) => val,
+        Err(_) => return false,
+    })
+}
+
 #[no_mangle]
 pub extern fn is_match(v: *mut c_char, r: *mut c_char) -> bool {
     unsafe {
         let v = CStr::from_ptr(v);
-        let v = match v.to_str() {
-            Ok(s) => s,
-            Err(_) => return false,
-        };
+        let v = check!(v.to_str());
 
         let r = CStr::from_ptr(r);
-        let r = match r.to_str() {
-            Ok(s) => s,
-            Err(_) => return false,
-        };
+        let r = check!(r.to_str());
         
-        let v = match Version::parse(v) {
-            Ok(v) => v,
-            Err(_) => return false,
-        };
+        let v = check!(Version::parse(v));
 
-        let r = match VersionReq::parse(r) {
-            Ok(r) => r,
-            Err(_) => return false,
-        };
+        let r = check!(VersionReq::parse(r));
 
         r.matches(&v)
     }
