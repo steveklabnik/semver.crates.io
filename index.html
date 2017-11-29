@@ -1,16 +1,84 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-      <meta charset="utf-8">
-      <title>wasm wasm wasm</title>
-      <script>
-        fetch('target/wasm32-unknown-unknown/release/semverweb.wasm').then(response =>
-          response.arrayBuffer()
-        ).then(bytes =>
-	  WebAssembly.instantiate(bytes, {})
-        ).then(results => {
-          alert(results.instance.exports.add_one(41));
+
+<head>
+  <meta charset="utf-8">
+  <title>wasm wasm wasm</title>
+  <script>
+    function fetchAndInstantiate(url, importObject) {
+      return fetch(url).then(response =>
+        response.arrayBuffer()
+      ).then(bytes =>
+        WebAssembly.instantiate(bytes, importObject)
+        ).then(results =>
+          results.instance
+        );
+    }
+
+    function newString(module, str) {
+      const utf8Encoder = new TextEncoder("UTF-8");
+      let string_buffer = utf8Encoder.encode(str)
+      let len = string_buffer.length
+      let ptr = module.alloc(len)
+
+      let memory = new Uint8Array(module.memory.buffer);
+      for (i = 0; i < len; i++) {
+        memory[ptr + i] = string_buffer[i]
+      }
+
+      memory[ptr + len] = 0;
+
+      return ptr
+    }
+    window.Module = {}
+    fetchAndInstantiate("target/wasm32-unknown-unknown/release/semverweb.wasm", {})
+      .then(mod => {
+        Module.alloc = mod.exports.alloc;
+        Module.dealloc = mod.exports.dealloc;
+        Module.memory = mod.exports.memory;
+        Module.isMatch = mod.exports.is_match;
+
+        var version = document.getElementById("version");
+        var requirement = document.getElementById("requirement");
+        document.getElementById("calculate").addEventListener("submit", e => {
+          // we don't want to submit the form
+          e.preventDefault();
+
+          var v = newString(Module, version.value);
+          var r = newString(Module, requirement.value);
+
+          var result = Module.isMatch(v, r);
+
+          Module.dealloc(v);
+          Module.dealloc(r);
+          if (result == 1) {
+            alert("match");
+          } else {
+            alert("not a match");
+          }
         });
-      </script>
-  </head>
+      });
+  </script>
+</head>
+<body>
+  <form id="calculate">
+  <fieldset>
+      <legend>Does it match?</legend>
+      <table>
+        <tr>
+          <td><label for="version">Version</label></td>
+          <td><input type="text" id="version" name="version" /></td>
+        </tr>
+        <tr>
+          <td><label for="requirement">Requirement</label></td>
+          <td><input type="text" id="requirement" name="requirement" /></td>
+        </tr>
+        <tr>
+          <td><button>Calculate</button></td><td></td>
+        </tr>
+      </table>
+  </fieldset>
+  </form>
+</body>
+
 </html>
