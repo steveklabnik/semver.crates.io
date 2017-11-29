@@ -3,7 +3,7 @@
 
 <head>
   <meta charset="utf-8">
-  <title>wasm wasm wasm</title>
+  <title>Semver on the web with Rust and WebAssembly</title>
   <script>
     function fetchAndInstantiate(url, importObject) {
       return fetch(url).then(response =>
@@ -61,6 +61,10 @@
   </script>
 </head>
 <body>
+  <h1>Semver on the web with Rust and WebAssembly</h1>
+  <p>This page lets you compare a semver requirement to a particular version to see if the version fulfills that requirement. Basically, it's like <a href="https://semver.npmjs.com/">semver.npmjs.com</a> but less fully-featured.</p>
+  <p>Additionally, this page is built by compiling Rust's <a href="https://crates.io/crates/semver">semver</a> crate to WebAssembly,
+  and then running that in the browser.</p>
   <form id="calculate">
   <fieldset>
       <legend>Does it match?</legend>
@@ -79,6 +83,95 @@
       </table>
   </fieldset>
   </form>
-</body>
+  <p>Some examples to try:</p>
+  <table>
+    <tr><th>Version</th><th>Requirement</th><th>Output</th></tr>
+    <tr><td><code>1.0.0</code></td><td><code>1.0.0</code></td><td>match</td></tr>
+    <tr><td><code>0.1.0</code></td><td><code>1.0.0</code></td><td>not a match</td></tr>
+    <tr><td><code>1.2.3</code></td><td><code>^ 1.0.0</code></td><td>match</td></tr>
+    <tr><td><code>0.3.0</code></td><td><code>&gt; 0.1.0, &lt; 0.5.0</code></td><td>match</td></tr>
+  </table>
+  <h2>Disclaimers</h2>
+  <p>Note that a bare version number defaults to a <code>^</code> requirement. For more, see <a href="http://doc.crates.io/specifying-dependencies.html">the docs</a>.</p>
+  <p>Any error returns "not a match", including failing of parsing.</p>
+  <p>I'm very bad at front-end dev, so the code is likely very bad.</p>
+  <p>Apparently if I used `wasm-opt` and `opt-level s` instead of `opt-level 3` this gets smaller, to around 60k.</p>
+  <p>Also, this code is a bit of a hack; we have some ABI issues to work out between JS/Rust interop. For more details on this, see <a href="https://github.com/killercup/wasm-experiments">killercup/wasm-experiments</a>, which is also where I got some of the code from.</p>
+  <p>Rust source code for the wasm file:</p>
+  <pre><code>extern crate semver;
 
+use semver::Version;
+use semver::VersionReq;
+
+use std::mem;
+use std::ffi::CStr;
+use std::os::raw::{c_char, c_void};
+
+macro_rules! check {
+    ($expr:expr) => (match $expr {
+        Ok(val) => val,
+        Err(_) => return false,
+    })
+}
+
+#[no_mangle]
+pub extern fn is_match(v: *mut c_char, r: *mut c_char) -> bool {
+    unsafe {
+        let v = CStr::from_ptr(v);
+        let v = check!(v.to_str());
+
+        let r = CStr::from_ptr(r);
+        let r = check!(r.to_str());
+        
+        let v = check!(Version::parse(v));
+
+        let r = check!(VersionReq::parse(r));
+
+        r.matches(&v)
+    }
+}
+
+// this shenanigans is due to it being tough to deal with JS strings into wasm,
+// see the JS code for more.
+
+#[no_mangle]
+pub extern "C" fn alloc(size: usize) -> *mut c_void {
+    let mut buf = Vec::with_capacity(size);
+    let ptr = buf.as_mut_ptr();
+    mem::forget(buf); // This is JS' responsibility now
+    return ptr as *mut c_void;
+}
+
+#[no_mangle]
+pub extern "C" fn dealloc(ptr: *mut c_void, cap: usize) {
+    unsafe  {
+        let _buf = Vec::from_raw_parts(ptr, 0, cap);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::ffi::CString;
+    use super::is_match;
+
+    #[test]
+    fn matches() {
+        // these are going to leak but it's two tests so I don't care
+        let v = CString::new("1.0.0").unwrap().into_raw();
+        let r = CString::new(">= 1.0.0").unwrap().into_raw();
+
+        assert!(is_match(v, r));
+    }
+
+    #[test]
+    fn does_not_match() {
+        // these are going to leak but it's two tests so I don't care
+        let v = CString::new("0.1.0").unwrap().into_raw();
+        let r = CString::new(">= 1.0.0").unwrap().into_raw();
+
+        assert!(!is_match(v, r));
+    }
+}
+</code></pre>
+</body>
 </html>
