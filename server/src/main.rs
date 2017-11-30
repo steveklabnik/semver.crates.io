@@ -8,7 +8,7 @@ use std::fs::File;
 use std::io::prelude::*;
 
 fn main() {
-    let host = "127.0.0.1";
+    let host = "0.0.0.0";
     let port = env::var("PORT").unwrap_or(String::from("7878"));
 
     println!("Starting server on http://{}:{}", host, port);
