@@ -43,15 +43,17 @@
           // we don't want to submit the form
           e.preventDefault();
 
-          fetch("https://crates.io/api/v1/crates/libc/versions", { mode: 'cors' }).then(response => {
-            var contentType = response.headers.get("Content-Type");
-            console.log(response.headers);
-            if (contentType && contentType.includes("application/json")) {
-              return response.json();
-            }
-            throw new TypeError("Oops, we haven't got JSON!");
+          fetch("/versions/libc", { mode: 'cors' }).then(response => {
+            return response.json();
           }).then(function (json) {
-            console.log(json);
+            let list = document.getElementById("versions");
+            list.innerHTML = "";
+
+            for(version of json.versions) {
+              var li = document.createElement("li");
+              li.appendChild(document.createTextNode(version.num));
+              list.appendChild(li);
+            }
           });
 
           //var v = newString(Module, version.value);
@@ -87,5 +89,6 @@
       </table>
   </fieldset>
   </form>
+  <ul id="versions"></ul>
 </body>
 </html>

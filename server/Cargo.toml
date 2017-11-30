@@ -5,3 +5,4 @@ authors = ["steveklabnik <steve@steveklabnik.com>"]
 
 [dependencies]
 simple-server = "0.3.0"
+reqwest = "0.8.0"
