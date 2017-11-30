@@ -72,7 +72,9 @@ fn main() {
             println!("done");
         } else {
             println!();
-            panic!("failed! output: {:?}", output);
+            println!("failed! Output:");
+            println!("{}", std::str::from_utf8(&output.stderr).unwrap());
+            std::process::exit(1);
         }
     } else {
         println!("no. continuting without wasm-gc optimization.")
@@ -95,6 +97,14 @@ fn main() {
         println!("{}", std::str::from_utf8(&output.stderr).unwrap());
         std::process::exit(1);
     }
+
+    print!("Copying wasm file to public directory...");
+    io::stdout().flush().unwrap();
+
+    std::fs::rename("semver-wasm/target/wasm32-unknown-unknown/release/semver_wasm.wasm", "public/semver.wasm")
+        .expect("Couldn't move file");
+
+    println!("done");
 
     println!("Running the server!");
     let mut child = Command::new("cargo")

@@ -31,7 +31,7 @@
       return ptr
     }
     window.Module = {}
-    fetchAndInstantiate("target/wasm32-unknown-unknown/release/semverweb.wasm", {})
+    fetchAndInstantiate("/semver.wasm", {})
       .then(mod => {
         Module.alloc = mod.exports.alloc;
         Module.dealloc = mod.exports.dealloc;
