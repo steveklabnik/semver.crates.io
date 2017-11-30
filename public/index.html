@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <title>Semver on the web with Rust and WebAssembly</title>
+  <script>
+    function fetchAndInstantiate(url, importObject) {
+      return fetch(url).then(response =>
+        response.arrayBuffer()
+      ).then(bytes =>
+        WebAssembly.instantiate(bytes, importObject)
+        ).then(results =>
+          results.instance
+        );
+    }
+
+    function newString(module, str) {
+      const utf8Encoder = new TextEncoder("UTF-8");
+      let string_buffer = utf8Encoder.encode(str)
+      let len = string_buffer.length
+      let ptr = module.alloc(len)
+
+      let memory = new Uint8Array(module.memory.buffer);
+      for (i = 0; i < len; i++) {
+        memory[ptr + i] = string_buffer[i]
+      }
+
+      memory[ptr + len] = 0;
+
+      return ptr
+    }
+    window.Module = {}
+    fetchAndInstantiate("target/wasm32-unknown-unknown/release/semverweb.wasm", {})
+      .then(mod => {
+        Module.alloc = mod.exports.alloc;
+        Module.dealloc = mod.exports.dealloc;
+        Module.memory = mod.exports.memory;
+        Module.isMatch = mod.exports.is_match;
+
+        var crateName = document.getElementById("crateName");
+        document.getElementById("calculate").addEventListener("submit", e => {
+          // we don't want to submit the form
+          e.preventDefault();
+
+          fetch("https://crates.io/api/v1/crates/libc/versions", { mode: 'cors' }).then(response => {
+            var contentType = response.headers.get("Content-Type");
+            console.log(response.headers);
+            if (contentType && contentType.includes("application/json")) {
+              return response.json();
+            }
+            throw new TypeError("Oops, we haven't got JSON!");
+          }).then(function (json) {
+            console.log(json);
+          });
+
+          //var v = newString(Module, version.value);
+          //var r = newString(Module, requirement.value);
+
+          //var result = Module.isMatch(v, r);
+
+          //Module.dealloc(v);
+          //Module.dealloc(r);
+          /*
+          if (result == 1) {
+            alert("match");
+          } else {
+            alert("not a match");
+          }
+          */
+        });
+      });
+  </script>
+</head>
+<body>
+  <form id="calculate">
+  <fieldset>
+      <legend>SemVer Calculator</legend>
+      <table>
+        <tr>
+          <td><label for="crateName">Crate Name</label></td>
+          <td><input type="text" id="crateName" name="crateName" /></td>
+        </tr>
+        <tr>
+          <td><button>Fetch</button></td><td></td>
+        </tr>
+      </table>
+  </fieldset>
+  </form>
+</body>
+</html>
