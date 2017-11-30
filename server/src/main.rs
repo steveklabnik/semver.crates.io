@@ -35,7 +35,7 @@ fn main() {
             let mut resp = reqwest::get(&format!("https://crates.io/api/v1/crates/{}/versions", crate_name)).unwrap();
 
             let mut content = Vec::new();
-            resp.read_to_end(&mut content);
+            resp.read_to_end(&mut content).unwrap();
 
             response.header("Content-Type", "application/json");
             return Ok(response.body(content)?);
