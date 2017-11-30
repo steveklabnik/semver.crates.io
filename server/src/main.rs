@@ -3,14 +3,16 @@ extern crate simple_server;
 
 use simple_server::{Server, Method, StatusCode};
 
+use std::env;
 use std::fs::File;
 use std::io::prelude::*;
 
 fn main() {
     let host = "127.0.0.1";
-    let port = "7878";
+    let port = env::var("PORT").unwrap_or(String::from("7878"));
 
     println!("Starting server on http://{}:{}", host, port);
+
     let server = Server::new(|request, mut response| {
         let method = request.method();
         let uri = request.uri();
@@ -46,5 +48,5 @@ fn main() {
         Ok(response.body("<h1>404</h1><p>Not found!<p>".as_bytes().to_vec())?)
     });
 
-    server.listen(host, port);
+    server.listen(host, &port);
 }
