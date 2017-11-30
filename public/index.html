@@ -39,40 +39,43 @@
         Module.isMatch = mod.exports.is_match;
 
         var crateName = document.getElementById("crateName");
+        var requirement = document.getElementById("requirement");
         document.getElementById("calculate").addEventListener("submit", e => {
           // we don't want to submit the form
           e.preventDefault();
 
-          fetch("/versions/libc", { mode: 'cors' }).then(response => {
+          fetch("/versions/" + crateName.value, { mode: 'cors' }).then(response => {
             return response.json();
           }).then(function (json) {
             let list = document.getElementById("versions");
             list.innerHTML = "";
 
             for(version of json.versions) {
-              var li = document.createElement("li");
+              let li = document.createElement("li");
               li.appendChild(document.createTextNode(version.num));
+
+              let v = newString(Module, version.num);
+              let r = newString(Module, requirement.value);
+
+              let result = Module.isMatch(v, r);
+              if (result == 1) {
+                li.className = "matches"
+              }
+
+              Module.dealloc(v);
+              Module.dealloc(r);
+
               list.appendChild(li);
             }
           });
-
-          //var v = newString(Module, version.value);
-          //var r = newString(Module, requirement.value);
-
-          //var result = Module.isMatch(v, r);
-
-          //Module.dealloc(v);
-          //Module.dealloc(r);
-          /*
-          if (result == 1) {
-            alert("match");
-          } else {
-            alert("not a match");
-          }
-          */
         });
       });
   </script>
+  <style>
+    li.matches {
+      font-weight: bold;
+    }
+  </style>
 </head>
 <body>
   <form id="calculate">
@@ -82,6 +85,10 @@
         <tr>
           <td><label for="crateName">Crate Name</label></td>
           <td><input type="text" id="crateName" name="crateName" /></td>
+        </tr>
+        <tr>
+          <td><label for="requirement">SemVer Requirement</label></td>
+          <td><input type="text" id="requirement" name="requirement" /></td>
         </tr>
         <tr>
           <td><button>Fetch</button></td><td></td>
